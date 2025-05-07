@@ -19,11 +19,35 @@ app.use((req, res, next) => {
 });
 
 // CORS configuration
+const allowedOrigins = [
+  'https://pickra.vercel.app',     // Production frontend
+  'http://localhost:3000',         // Local development frontend
+  'http://127.0.0.1:3000',        // Alternative local development frontend
+  'http://localhost:5173',         // Vite default port
+  'http://127.0.0.1:5173'         // Vite default port alternative
+];
+
 app.use(cors({
-  origin: 'https://pickra.vercel.app',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Log the origin for debugging
+    console.log('Request origin:', origin);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      console.log('Blocked by CORS:', origin);
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    console.log('Allowed by CORS:', origin);
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
+  maxAge: 86400 // 24 hours
 }));
 
 // Middleware
@@ -65,6 +89,7 @@ const server = app.listen(PORT, () => {
   console.log(`📧 Email API: http://localhost:${PORT}/api/email/send-email`);
   console.log(`📄 PDF API: http://localhost:${PORT}/api/pdf/extract-text`);
   console.log(`🖼️ Image API: http://localhost:${PORT}/api/image/extract-text\n`);
+  console.log('🔒 CORS enabled for origins:', allowedOrigins.join(', '));
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`Port ${PORT} is already in use. Please try a different port or kill the process using this port.`);
